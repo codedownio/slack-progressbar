@@ -1,0 +1,9 @@
+
+resolver: lts-14.23
+
+packages:
+- .
+- /home/tom/tools/slack-api
+
+# extra-deps:
+# - slack-api-0.12@sha256:7bb8d067d33fdc69011b2bdb64a071873bfcbfe637a736dcaa97d41ef345b735,3463
