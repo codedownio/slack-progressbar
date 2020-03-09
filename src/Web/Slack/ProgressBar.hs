@@ -1,8 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeFamilies, DataKinds, GADTs, QuasiQuotes, FlexibleContexts, LambdaCase, RecordWildCards #-}
 
-module Web.Slack.ProgressBar where
+module Web.Slack.ProgressBar (
+  createProgressBar
+  , updateProgressBar
+  , ProgressBarInfo (..)
+  , ProgressBar
+  , ChannelName
 
-import Control.Concurrent
+  -- * Re-exports
+  , SlackConfig (..)
+  ) where
+
 import Control.Lens hiding ((??))
 import Control.Monad.Error
 import Control.Monad.Except
@@ -18,8 +26,6 @@ import qualified Network.Wreq as W
 import Web.Slack
 import Web.Slack.WebAPI
 
-mySlackConfig :: SlackConfig
-mySlackConfig = SlackConfig { _slackApiToken = "TODO" }
 
 data ProgressBarInfo = ProgressBarInfo { progressBarInfoTopMessage :: Maybe T.Text
                                        , progressBarInfoBottomMessage :: Maybe T.Text
@@ -33,26 +39,11 @@ type ChannelName = T.Text
 instance Error T.Text where
   noMsg = ""
 
-go :: IO ()
-go = void $ runExceptT $ do
-  let progressBarInfo = ProgressBarInfo {
-        progressBarInfoTopMessage = Just "Top message"
-        , progressBarInfoBottomMessage = Just "Bottom message"
-        , progressBarInfoSize = 0
-        }
-
-  progressBar <- ExceptT $ createProgressBar mySlackConfig "test-channel" progressBarInfo
-
-  forM_ [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] $ \size -> do
-    liftIO $ threadDelay 1000000
-    ExceptT $ updateProgressBar mySlackConfig progressBar (progressBarInfo { progressBarInfoSize = size })
-
-
 -- * Exported
 
 createProgressBar :: SlackConfig -> ChannelName -> ProgressBarInfo -> IO (Either T.Text ProgressBar)
-createProgressBar slackConfig channel (ProgressBarInfo {..}) =
-  (runExceptT $ postMessage slackConfig (Id channel) (barSized 25) []) >>= \case
+createProgressBar slackConfig channel pbi =
+  (runExceptT $ postMessage slackConfig (Id channel) (getMessage pbi) []) >>= \case
     Left err -> return $ Left [i|Failed to send initial result: '#{err}'|]
     Right resp -> case (resp ^? key "ts" . _String, resp ^? key "channel" . _String) of
       (Just ts, Just chan) -> return $ Right $ ProgressBar ts chan
@@ -73,7 +64,15 @@ getMessage (ProgressBarInfo {..}) =
                                  , progressBarInfoBottomMessage]
 
 barSized :: Double -> T.Text
-barSized n = T.replicate (round $ n / 2.0) $ T.singleton $ chr 9608
+barSized n = (T.replicate darkBlocks $ T.singleton $ chr 9608)
+             <> (T.replicate lightBlocks $ T.singleton $ chr 9617)
+             <> [i| #{roundTo 2 n}%|]
+  where darkBlocks = round $ n * multiplier
+        lightBlocks = round $ (100 - n) * multiplier
+        multiplier = 0.5
+
+        roundTo :: (Fractional a, RealFrac a) => Integer -> a -> a
+        roundTo places num = (fromInteger $ round $ num * (10^places)) / (10.0^^places)
 
 postMessage :: (MonadError T.Text m, MonadIO m) => SlackConfig -> ChannelId -> T.Text -> [Attachment] -> m Value
 postMessage conf (Id cid) msg as =
