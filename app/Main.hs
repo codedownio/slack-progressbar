@@ -7,7 +7,7 @@ import Control.Monad.Except
 import Web.Slack.ProgressBar
 
 mySlackConfig :: SlackConfig
-mySlackConfig = SlackConfig { _slackApiToken = "TODO" }
+mySlackConfig = SlackConfig { slackApiToken = "TODO" }
 
 main :: IO ()
 main = void $ runExceptT $ do

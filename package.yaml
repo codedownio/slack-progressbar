@@ -28,7 +28,6 @@ dependencies:
 - lens-aeson
 - mtl
 - network-uri
-- slack-api
 - text
 - transformers
 - wreq

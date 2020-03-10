@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 95e7e526c551238fac4c1b66d0da853a457d9c0b3a3e323aa3fa33902872aabc
+-- hash: cf075ef58b7c7ef78fe98e13b87598f99159f24589995e9544796ecbf8cac69a
 
 name:           slack-progressbar
 version:        0.1.0.0
@@ -41,7 +41,6 @@ library
     , lens-aeson
     , mtl
     , network-uri
-    , slack-api
     , text
     , transformers
     , wreq
@@ -63,7 +62,6 @@ executable slack-progressbar-exe
     , lens-aeson
     , mtl
     , network-uri
-    , slack-api
     , slack-progressbar
     , text
     , transformers
@@ -87,7 +85,6 @@ test-suite slack-progressbar-test
     , lens-aeson
     , mtl
     , network-uri
-    , slack-api
     , slack-progressbar
     , text
     , transformers

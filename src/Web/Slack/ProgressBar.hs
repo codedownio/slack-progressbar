@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TypeFamilies, DataKinds, GADTs, QuasiQuotes, FlexibleContexts, LambdaCase, RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, QuasiQuotes, FlexibleContexts, LambdaCase, RecordWildCards #-}
 
 module Web.Slack.ProgressBar (
   createProgressBar
@@ -12,9 +12,9 @@ module Web.Slack.ProgressBar (
   ) where
 
 import Control.Lens hiding ((??))
-import Control.Monad.Error
 import Control.Monad.Except
 import Data.Aeson
+import qualified Data.Aeson as A
 import Data.Aeson.Lens
 import qualified Data.ByteString.Lazy as BL
 import Data.Char
@@ -23,8 +23,6 @@ import Data.String.Interpolate.IsString
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Network.Wreq as W
-import Web.Slack
-import Web.Slack.WebAPI
 
 
 data ProgressBarInfo = ProgressBarInfo { progressBarInfoTopMessage :: Maybe T.Text
@@ -36,14 +34,11 @@ data ProgressBar = ProgressBar { progressBarTs :: T.Text
 
 type ChannelName = T.Text
 
-instance Error T.Text where
-  noMsg = ""
-
 -- * Exported
 
 createProgressBar :: SlackConfig -> ChannelName -> ProgressBarInfo -> IO (Either T.Text ProgressBar)
 createProgressBar slackConfig channel pbi =
-  (runExceptT $ postMessage slackConfig (Id channel) (getMessage pbi) []) >>= \case
+  (runExceptT $ postMessage slackConfig channel (getMessage pbi) []) >>= \case
     Left err -> return $ Left [i|Failed to send initial result: '#{err}'|]
     Right resp -> case (resp ^? key "ts" . _String, resp ^? key "channel" . _String) of
       (Just ts, Just chan) -> return $ Right $ ProgressBar ts chan
@@ -51,7 +46,7 @@ createProgressBar slackConfig channel pbi =
 
 updateProgressBar :: SlackConfig -> ProgressBar -> ProgressBarInfo -> IO (Either T.Text ())
 updateProgressBar slackConfig (ProgressBar {..}) pbi@(ProgressBarInfo {..}) =
-  (runExceptT $ updateMessage slackConfig (Id progressBarChannel) progressBarTs (getMessage pbi) []) >>= \case
+  (runExceptT $ updateMessage slackConfig progressBarChannel progressBarTs (getMessage pbi) []) >>= \case
     Left err -> return $ Left [i|Failed to update progress bar: '#{err}'|]
     Right _ -> return $ Right ()
 
@@ -74,16 +69,16 @@ barSized n = (T.replicate darkBlocks $ T.singleton $ chr 9608)
         roundTo :: (Fractional a, RealFrac a) => Integer -> a -> a
         roundTo places num = (fromInteger $ round $ num * (10^places)) / (10.0^^places)
 
-postMessage :: (MonadError T.Text m, MonadIO m) => SlackConfig -> ChannelId -> T.Text -> [Attachment] -> m Value
-postMessage conf (Id cid) msg as =
+postMessage :: (MonadError T.Text m, MonadIO m) => SlackConfig -> ChannelName -> T.Text -> [A.Value] -> m Value
+postMessage conf cid msg as =
   makeSlackCall conf "chat.postMessage" $
     (W.param "channel"     .~ [cid])
     . (W.param "text"        .~ [msg])
     . (W.param "attachments" .~ [encode' as])
     . (W.param "as_user"     .~ ["true"])
 
-updateMessage :: (MonadError T.Text m, MonadIO m) => SlackConfig -> ChannelId -> T.Text -> T.Text -> [Attachment] -> m ()
-updateMessage conf (Id cid) ts msg as =
+updateMessage :: (MonadError T.Text m, MonadIO m) => SlackConfig -> ChannelName -> T.Text -> T.Text -> [A.Value] -> m ()
+updateMessage conf cid ts msg as =
   void $ makeSlackCall conf "chat.update" $
     (W.param "channel"     .~ [cid]) .
     (W.param "text"        .~ [msg]) .
@@ -93,3 +88,25 @@ updateMessage conf (Id cid) ts msg as =
 
 encode' :: ToJSON a => a -> T.Text
 encode' = T.decodeUtf8 . BL.toStrict . encode
+
+-- | Inlined and modified slightly from slack-api
+-- Didn't seem worth it to add that entire library as a dependency for these
+
+-- | Configuration options needed to connect to the Slack API
+newtype SlackConfig = SlackConfig { slackApiToken :: String } deriving (Show)
+
+makeSlackCall :: (MonadError T.Text m, MonadIO m) => SlackConfig -> String -> (W.Options -> W.Options) -> m Value
+makeSlackCall conf method setArgs = do
+  let url = "https://slack.com/api/" ++ method
+  let setToken = W.param "token" .~ [T.pack (slackApiToken conf)]
+  let opts = W.defaults & setToken & setArgs
+  rawResp <- liftIO $ W.getWith opts url
+  resp <- rawResp ^? W.responseBody . _Value ?? "Couldn't parse response"
+  case resp ^? key "ok" . _Bool of
+    Just True -> return resp
+    Just False -> throwError $ resp ^. key "error" . _String
+    Nothing -> throwError "Couldn't parse key 'ok' from response"
+
+infixl 7 ??
+(??) :: MonadError e m => Maybe a -> e -> m a
+x ?? e = maybe (throwError e) return x
