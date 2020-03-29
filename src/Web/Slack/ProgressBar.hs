@@ -27,7 +27,7 @@ import qualified Network.Wreq as W
 
 data ProgressBarInfo = ProgressBarInfo { progressBarInfoTopMessage :: Maybe T.Text
                                        , progressBarInfoBottomMessage :: Maybe T.Text
-                                       , progressBarInfoSize :: Double }
+                                       , progressBarInfoSize :: Maybe Double }
 
 data ProgressBar = ProgressBar { progressBarTs :: T.Text
                                , progressBarChannel :: T.Text }
@@ -55,7 +55,7 @@ updateProgressBar slackConfig (ProgressBar {..}) pbi@(ProgressBarInfo {..}) =
 getMessage :: ProgressBarInfo -> T.Text
 getMessage (ProgressBarInfo {..}) =
   T.intercalate "\n" $ catMaybes [progressBarInfoTopMessage
-                                 , Just $ barSized progressBarInfoSize
+                                 , barSized <$> progressBarInfoSize
                                  , progressBarInfoBottomMessage]
 
 barSized :: Double -> T.Text
