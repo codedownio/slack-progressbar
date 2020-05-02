@@ -4,6 +4,7 @@ module Web.Slack.ProgressBar (
   createProgressBar
   , updateProgressBar
   , ProgressBarInfo (..)
+  , ProgressBarAttachment (..)
   , ProgressBar
   , ChannelName
 
@@ -27,7 +28,14 @@ import qualified Network.Wreq as W
 
 data ProgressBarInfo = ProgressBarInfo { progressBarInfoTopMessage :: Maybe T.Text
                                        , progressBarInfoBottomMessage :: Maybe T.Text
-                                       , progressBarInfoSize :: Maybe Double }
+                                       , progressBarInfoSize :: Maybe Double
+                                       , progressBarInfoAttachments :: Maybe [ProgressBarAttachment] }
+
+data ProgressBarAttachment = ProgressBarAttachment { progressBarAttachmentText :: T.Text
+                                                   , progressBarAttachmentColor :: T.Text }
+instance ToJSON ProgressBarAttachment
+  where toJSON (ProgressBarAttachment {..}) = A.object [("text", A.String progressBarAttachmentText)
+                                                       , ("color", A.String progressBarAttachmentColor)]
 
 data ProgressBar = ProgressBar { progressBarTs :: T.Text
                                , progressBarChannel :: T.Text }
@@ -38,7 +46,7 @@ type ChannelName = T.Text
 
 createProgressBar :: SlackConfig -> ChannelName -> ProgressBarInfo -> IO (Either T.Text ProgressBar)
 createProgressBar slackConfig channel pbi =
-  (runExceptT $ postMessage slackConfig channel (getMessage pbi) []) >>= \case
+  (runExceptT $ postMessage slackConfig channel (getMessage pbi) (getAttachments pbi)) >>= \case
     Left err -> return $ Left [i|Failed to send initial result: '#{err}'|]
     Right resp -> case (resp ^? key "ts" . _String, resp ^? key "channel" . _String) of
       (Just ts, Just chan) -> return $ Right $ ProgressBar ts chan
@@ -46,7 +54,7 @@ createProgressBar slackConfig channel pbi =
 
 updateProgressBar :: SlackConfig -> ProgressBar -> ProgressBarInfo -> IO (Either T.Text ())
 updateProgressBar slackConfig (ProgressBar {..}) pbi@(ProgressBarInfo {..}) =
-  (runExceptT $ updateMessage slackConfig progressBarChannel progressBarTs (getMessage pbi) []) >>= \case
+  (runExceptT $ updateMessage slackConfig progressBarChannel progressBarTs (getMessage pbi) (getAttachments pbi)) >>= \case
     Left err -> return $ Left [i|Failed to update progress bar: '#{err}'|]
     Right _ -> return $ Right ()
 
@@ -57,6 +65,9 @@ getMessage (ProgressBarInfo {..}) =
   T.intercalate "\n" $ catMaybes [progressBarInfoTopMessage
                                  , barSized <$> progressBarInfoSize
                                  , progressBarInfoBottomMessage]
+
+getAttachments :: ProgressBarInfo -> [A.Value]
+getAttachments (ProgressBarInfo {..}) = maybe [] (fmap A.toJSON) progressBarInfoAttachments
 
 barSized :: Double -> T.Text
 barSized n = (T.replicate darkBlocks $ T.singleton $ chr 9608)
