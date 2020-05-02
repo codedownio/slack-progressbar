@@ -4,16 +4,16 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cf075ef58b7c7ef78fe98e13b87598f99159f24589995e9544796ecbf8cac69a
+-- hash: ae775c5a8e08203d0927633612ce70d68ef9c6d8e97dccb32555d080a416ebc5
 
 name:           slack-progressbar
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/slack-progressbar#readme>
 homepage:       https://github.com/githubuser/slack-progressbar#readme
 bug-reports:    https://github.com/githubuser/slack-progressbar/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
+author:         Tom McLaughlin
+maintainer:     tom@codedown.io
+copyright:      2020 CodeDown
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

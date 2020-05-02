@@ -24,7 +24,10 @@ main = void $ runExceptT $ do
 
   forM_ [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] $ \size -> do
     liftIO $ threadDelay 1000000
-    ExceptT $ updateProgressBar mySlackConfig progressBar (progressBarInfo {
-                                                              progressBarInfoSize = Just size
-                                                              , progressBarInfoAttachments = Just $ (ProgressBarAttachment [i|Hello there #{size}|] "#ff4136") : (fromMaybe [] (progressBarInfoAttachments progressBarInfo))
-                                                              })
+    ExceptT $ updateProgressBar mySlackConfig progressBar (
+      progressBarInfo {
+          progressBarInfoSize = Just size
+          , progressBarInfoAttachments = Just $
+              (ProgressBarAttachment [i|Hello there #{size}|] "#ff4136")
+              : (fromMaybe [] (progressBarInfoAttachments progressBarInfo))
+          })
