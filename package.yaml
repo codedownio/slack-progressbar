@@ -1,7 +1,7 @@
 name:                slack-progressbar
 version:             0.1.0.0
 github:              "githubuser/slack-progressbar"
-license:             BSD3
+license:             MIT
 author:              "Tom McLaughlin"
 maintainer:          "tom@codedown.io"
 copyright:           "2020 CodeDown"

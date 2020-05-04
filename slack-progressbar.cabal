@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ae775c5a8e08203d0927633612ce70d68ef9c6d8e97dccb32555d080a416ebc5
+-- hash: e02cced5857da29a9cf41726beda4002ad8659cc67ab309b5badc64895ed004a
 
 name:           slack-progressbar
 version:        0.1.0.0
@@ -14,7 +14,7 @@ bug-reports:    https://github.com/githubuser/slack-progressbar/issues
 author:         Tom McLaughlin
 maintainer:     tom@codedown.io
 copyright:      2020 CodeDown
-license:        BSD3
+license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
