@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: af26bb6a4aedf9a46d9190fd9df54dcc31346d9b648a2f2455d1807b10760e4e
+-- hash: 509416a4b76d8017508581fa1643f95f17f011d038a65f18f6ccfdac73118ff6
 
 name:           slack-progressbar
-version:        0.1.0.0
+version:        0.1.0.1
 description:    Please see the README on GitHub at <https://github.com/codedownio/slack-progressbar#readme>
 homepage:       https://github.com/codedownio/slack-progressbar#readme
 bug-reports:    https://github.com/codedownio/slack-progressbar/issues
