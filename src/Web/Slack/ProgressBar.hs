@@ -1,4 +1,9 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, QuasiQuotes, FlexibleContexts, LambdaCase, RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 {-|
 Module:      Web.Slack.ProgressBar
@@ -10,44 +15,7 @@ Portability: portable
 This is a simple library for creating and updating Slack messages that contain progress bars.
 It can be used to display the progress of a long-running task in a Slack channel, for example as part of CI tooling.
 
-@
-mySlackConfig :: 'SlackConfig'
-mySlackConfig = 'SlackConfig' { 'slackApiToken' = "my-slack-api-token" }
-
-runProgressBar :: IO (Either Text ())
-runProgressBar = runExceptT $ do
-  let progressBarInfo = 'ProgressBarInfo' {
-        'progressBarInfoTopMessage' = Just "Top message"
-        , 'progressBarInfoBottomMessage' = Just "Bottom message"
-        , 'progressBarInfoSize' = Just 0
-        , 'progressBarInfoAttachments' = Just []
-        }
-
-  progressBar <- ExceptT $ 'createProgressBar' mySlackConfig "test-channel" progressBarInfo
-
-  attachmentsRef <- liftIO $ newIORef []
-  forM_ [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] $ \\size -> do
-    liftIO $ threadDelay 1000000
-
-    -- Add attachments on a few examples
-    when (size `elem` [30, 60, 90]) $
-      liftIO $ modifyIORef attachmentsRef (<> [[i|Got failure at #{size}|]])
-
-    attachments <- liftIO $ readIORef attachmentsRef
-
-    ExceptT $ 'updateProgressBar' mySlackConfig progressBar (
-      progressBarInfo {
-          'progressBarInfoSize' = Just size
-          , 'progressBarInfoAttachments' = Just [ProgressBarAttachment x "#ff4136" | x <- attachments]
-          , 'progressBarInfoBottomMessage' = Just [i|Currently running at #{size}|]
-          })
-
-main :: IO ()
-main = runProgressBar >>= \\case
-  Left err -> error [i|Progress bar failed: '#{err}'|]
-  Right () -> return ()
-@
-
+See <https://github.com/codedownio/slack-progressbar/blob/master/app/Main.hs app/Main.hs> in the repo for example code, or <https://github.com/codedownio/slack-progressbar#readme README.md> on GitHub for an animated GIF.
 -}
 
 module Web.Slack.ProgressBar (
@@ -166,14 +134,14 @@ encode' = T.decodeUtf8 . BL.toStrict . encode
 -- Based on code from slack-api
 
 -- | Configuration options needed to connect to the Slack API
-newtype SlackConfig = SlackConfig { slackApiToken :: String
+newtype SlackConfig = SlackConfig { slackApiToken :: T.Text
                                   -- ^ Slack API token
                                   } deriving (Show)
 
 makeSlackCall :: (MonadError T.Text m, MonadIO m) => SlackConfig -> String -> (W.Options -> W.Options) -> m Value
 makeSlackCall conf method setArgs = do
   let url = "https://slack.com/api/" ++ method
-  let setToken = W.param "token" .~ [T.pack (slackApiToken conf)]
+  let setToken = W.param "token" .~ [slackApiToken conf]
   let opts = W.defaults & setToken & setArgs
   rawResp <- liftIO $ W.getWith opts url
   resp <- rawResp ^? W.responseBody . _Value ?? "Couldn't parse response"
